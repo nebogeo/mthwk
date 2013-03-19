@@ -52,6 +52,8 @@
         (hint-wire)
         (build-cube)))
 
+(define cali #f)
+
 
 (define (update-frame frame cloud)
     (update-cloud cloud)
@@ -61,30 +63,41 @@
             (pdata-map!
                 (lambda (c p) 
                     (let ((px (vtransform p tx)))
-                        (if (and (> (vx px) -1) (< (vx px) 1)
-                                (> (vy px) -1) (< (vy px) 1)
-                                (> (vz px) -1) (< (vz px) 1))
+                        (if (and (> (vx px) -0.5) (< (vx px) 0.5)
+                                (> (vy px) -0.5) (< (vy px) 0.5)
+                                (> (vz px) -0.5) (< (vz px) 0.5))
                             (if (< (vy px) 0)
                                 (vector 0 1 1)
                                 (vector 1 0 0))    
                             (vector 0.5 0.5 0.5))))
                 "c" "p"))
-    
-    (let* ((r (with-primitive cloud (pdata-fold
-                        (lambda (p c r)
-                            (if (> (vx c) 0.5)
-                                (list (+ (car r) 1) (vadd (cadr r) p))
-                                r))
-                        (list 0 (vector 0 0 0))
-                        "p" "c")))
-            (pos (vdiv (cadr r) (if (zero? (car r)) 1 (car r)))))
-        (with-state
-            (translate pos)
-            (scale 0.1)
-            (draw-cube))
-        (let ((pp (vtransform pos tx)))
- ;       (display "sending")(newline)
-        (osc-send "/pos" "fff" (list (vx pp) (vy pp) (vz pp)))))) 
+        
+        
+        (let* ((r (with-primitive cloud (pdata-fold
+                            (lambda (p c r)
+                                (if (> (vx c) 0.5)
+                                    (list (+ (car r) 1) (vadd (cadr r) p))
+                                    r))
+                            (list 0 (vector 0 0 0))
+                            "p" "c")))
+                (pos (cond (cali
+                            (let ((t (inexact->exact (floor (fmod (time) 4)))))
+                                (vtransform 
+                                    (cond 
+                                        ((eq? t 0) (vector 0.5 0 0.5)) 
+                                        ((eq? t 1) (vector 0.5 0 -0.5)) 
+                                        ((eq? t 2) (vector -0.5 0 -0.5)) 
+                                        ((eq? t 3) (vector -0.5 0 0.5))) 
+                                    (minverse tx)))) 
+                        
+                        (else (vdiv (cadr r) (if (zero? (car r)) 1 (car r)))))))
+            (with-state
+                (translate pos)
+                (scale 0.1)
+                (draw-cube))
+            (let ((pp (vtransform pos tx)))
+                ;       (display "sending")(newline)
+                (osc-send "/pos" "fff" (list (vx pp) (vy pp) (vz pp)))))) 
     
     
     (with-primitive frame
@@ -96,8 +109,8 @@
             ((key-pressed "z") (rotate (vector 0 0 1)))
             ((key-pressed "x") (rotate (vector 0 0 -1)))
             
-                        ((key-pressed "e") (scale (vector 1.1 1.1 1.1)))
-                        ((key-pressed "r") (scale (vector 0.9 0.9 0.9)))
+            ((key-pressed "e") (scale (vector 1.1 1.1 1.1)))
+            ((key-pressed "r") (scale (vector 0.9 0.9 0.9)))
             ;            ((key-pressed "d") (scale (vector 1 1.1 1)))
             ;            ((key-pressed "f") (scale (vector 1 0.9 1)))
             ;            ((key-pressed "c") (scale (vector 1 1 1.1)))
@@ -116,7 +129,29 @@
 
 (show-fps 1)
 (define cloud (make-cloud))
-(define frame (let ((p (with-state (scale 2) (make-frame))))
-    (with-primitive p (apply-transform)) p))
+(define frame (let ((p (with-state (scale 1) (make-frame))))
+        (with-primitive p 
+            (apply-transform)
+            (rotate (vector -35 0 0))
+            (translate (vector 0.5 -1.3 1.5))
+            
+            ) p))    
 
 (every-frame (update-frame frame cloud))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
