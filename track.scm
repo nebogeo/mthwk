@@ -127,6 +127,18 @@
 
 (clear)
 
+(define (slurp fn)
+    (define (_ f)
+        (let ((l (read-line f)))
+            (if (eof-object? l) ""
+                (string-append l "\n" (_ f)))))
+    (let* ((f (open-input-file fn))
+            (r (_ f)))
+        (close-input-port f)
+        r))
+
+;(osc-send "/eval" "s" (list (slurp "scenes/scene3.scm")))
+
 (show-fps 1)
 (define cloud (make-cloud))
 (define frame (let ((p (with-state (scale 1) (make-frame))))
